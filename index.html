@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Panchayat → Villages Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        html,
+        body,
+        #map {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        #sidebar {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 300px;
+            max-height: 80%;
+            overflow: auto;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            border-radius: 6px
+        }
+
+        #sidebar h3 {
+            margin: 0 0 8px 0
+        }
+
+        #map-container {
+            position: relative;
+            height: 100vh
+        }
+    </style>
+</head>
+
+<body>
+    <div id="map-container">
+        <div id="map"></div>
+        <div id="sidebar">
+            <div id="list"><strong>Instructions:</strong>
+                <p>Convert your .gdb panchayat & village layers into <code>data/panchayats.geojson</code> and
+                    <code>data/villages.geojson</code>. Then click a panchayat on the map to list its villages here.</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="js/app.js"></script>
+</body>
+
+</html>

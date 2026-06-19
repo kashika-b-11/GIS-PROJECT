@@ -1,0 +1,17 @@
+{
+  "converted_count": 4,
+  "copied_count": 1,
+  "gdb_count": 0,
+  "errors_count": 0,
+  "converted": [
+    "C:\\Users\\HP\\Desktop\\GIS PROJECT\\data\\GIS DATA\\2 HP_Geo_Information\\HP_Boundary.geojson",
+    "C:\\Users\\HP\\Desktop\\GIS PROJECT\\data\\GIS DATA\\2 HP_Geo_Information\\HP_District_Boundary.geojson",
+    "C:\\Users\\HP\\Desktop\\GIS PROJECT\\data\\GIS DATA\\2 HP_Geo_Information\\HP_Teshil_Boundary.geojson",
+    "C:\\Users\\HP\\Desktop\\GIS PROJECT\\data\\LGD Village Database of Himachal Pradesh\\SHP\\Village_location.geojson"
+  ],
+  "copied": [
+    "C:\\Users\\HP\\Desktop\\GIS PROJECT\\data\\LGD Village Database of Himachal Pradesh\\SHP\\Village_Boundary\\vb_soi_hp.GeoJSON"
+  ],
+  "gdbs": [],
+  "errors": []
+}
