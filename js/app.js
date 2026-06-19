@@ -5,99 +5,162 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap'
 }).addTo(map);
 
-let villagesIndex = {}; // map panchayat key -> [village features]
+let villagesIndex = {}; // normalized panchayat key -> [village features]
+let panchayatNames = {}; // normalized panchayat key -> display name
 let villagesLayer;
 
 function getProp(feature, names) {
-    for (const n of names) { if (feature.properties && feature.properties[n] !== undefined) return feature.properties[n]; }
+    for (const n of names) {
+        if (feature.properties && feature.properties[n] !== undefined && feature.properties[n] !== null && feature.properties[n] !== '') {
+            return feature.properties[n];
+        }
+    }
     return undefined;
 }
 
-// Load villages first (this dataset contains Gram_Panch name)
-fetch('data/villages.geojson').then(r => r.ok ? r.json() : Promise.reject('villages not found')).then(villages => {
-    // build villages index by panchayat name/id (try common fields including LGD fields)
-    villages.features.forEach(f => {
-        const key = getProp(f, ['Gram_Panch', 'Gram_Pan_1', 'Gram_Panchayat', 'GRAM_PANCH', 'PANCHAYAT', 'Panchayat', 'panchayat']) || getProp(f, ['P_NAME', 'NAME', 'Village', 'VILLAGE', 'Village_Na', 'Village_Na']) || 'unknown';
-        if (!villagesIndex[key]) villagesIndex[key] = [];
-        villagesIndex[key].push(f);
-    });
+function normalizeKey(value) {
+    return String(value || '').trim().toLowerCase();
+}
 
-    villagesLayer = L.geoJSON(villages, {
-        style: { color: '#ff7800', weight: 1, opacity: 0.6 },
-        onEachFeature: (feature, layer) => {
-            const vname = getProp(feature, ['Village_Na', 'Village_Na', 'Village', 'NAME', 'NAME_', 'Village_Name']) || 'Village';
-            const panch = getProp(feature, ['Gram_Panch', 'Gram_Pan_1', 'Gram_Panchayat', 'PANCHAYAT']) || '';
-            layer.bindPopup(`<strong>${vname}</strong><br/>Panchayat: ${panch}`);
-            layer.on('click', () => {
-                // on village click, show panchayat list for that village
-                showPanchayat(panch);
-            });
-        }
-    }).addTo(map);
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    }[char]));
+}
 
-    // try to load panchayat polygons; if missing, try panchayats_from_villages (points), otherwise build a panchayat list from villages
-    function handlePanchayatFeatures(panchayats) {
-        const panchayatLayer = L.geoJSON(panchayats, {
-            pointToLayer: (f, latlng) => L.circleMarker(latlng, { radius: 6, color: '#2E86AB', fillOpacity: 0.9 }),
-            style: { color: '#2E86AB', weight: 2, fillOpacity: 0.1 },
+function getPanchayatName(feature) {
+    return getProp(feature, ['Gram_Panch', 'Gram_Panchayat', 'GRAM_PANCH', 'PANCHAYAT', 'Panchayat', 'panchayat']);
+}
+
+function getVillageName(feature) {
+    return getProp(feature, ['Village_Ve', 'Village_Name', 'Village', 'VILLAGE', 'NAME', 'NAME_', 'Village_Na']) || 'Village';
+}
+
+// Load villages first because this dataset contains the Gram_Panch field.
+fetch('data/villages.geojson')
+    .then(r => r.ok ? r.json() : Promise.reject('villages not found'))
+    .then(villages => {
+        villages.features.forEach(f => {
+            const displayName = getPanchayatName(f) || 'Unknown panchayat';
+            const key = normalizeKey(displayName);
+
+            if (!villagesIndex[key]) villagesIndex[key] = [];
+            if (!panchayatNames[key]) panchayatNames[key] = displayName;
+
+            villagesIndex[key].push(f);
+        });
+
+        villagesLayer = L.geoJSON(villages, {
+            pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
+                radius: 3,
+                color: '#ff7800',
+                weight: 1,
+                fillColor: '#ffb347',
+                fillOpacity: 0.65
+            }),
+            style: { color: '#ff7800', weight: 1, opacity: 0.6 },
             onEachFeature: (feature, layer) => {
-                const pname = getProp(feature, ['panchayat', 'PANCHAYAT', 'Panchayat', 'NAME', 'Name']) || (feature.properties && (feature.properties.panchayat || feature.properties.PANCHAYAT)) || 'Panchayat';
-                layer.bindPopup(pname + (feature.properties && feature.properties.village_count ? ` (${feature.properties.village_count} villages)` : ''));
+                const vname = getVillageName(feature);
+                const panch = getPanchayatName(feature) || '';
+
+                layer.bindPopup(`<strong>${escapeHtml(vname)}</strong><br/>Panchayat: ${escapeHtml(panch)}`);
                 layer.on('click', () => {
-                    if (layer.getBounds) try { map.fitBounds(layer.getBounds()); } catch (e) { }
-                    showPanchayat(pname);
+                    showPanchayat(panch);
                 });
             }
         }).addTo(map);
-    }
 
-    fetch('data/panchayats.geojson').then(r => r.ok ? r.json() : Promise.reject('panchayats not found')).then(panchayats => {
-        handlePanchayatFeatures(panchayats);
-    }).catch(_ => {
-        // try generated panchayat points
-        fetch('data/panchayats_from_villages.geojson').then(r => r.ok ? r.json() : Promise.reject('panchayats_from_villages not found')).then(pf => {
-            handlePanchayatFeatures(pf);
-        }).catch(_ => {
-            // no panchayat polygons/points: render clickable panchayat list from villages
-            const el = document.getElementById('list');
-            const keys = Object.keys(villagesIndex).sort();
-            el.innerHTML = `<h3>Panchayats (${keys.length})</h3><div style="max-height:60vh;overflow:auto"><ul>` + keys.map(k => `<li><a href="#" data-p="${k}">${k}</a></li>`).join('') + `</ul></div><p>Click a panchayat to zoom and list its villages.</p>`;
-            el.querySelectorAll('a[data-p]').forEach(a => {
-                a.addEventListener('click', e => {
-                    e.preventDefault();
-                    showPanchayat(a.dataset.p);
-                });
+        function handlePanchayatFeatures(panchayats) {
+            L.geoJSON(panchayats, {
+                pointToLayer: (f, latlng) => L.circleMarker(latlng, {
+                    radius: 6,
+                    color: '#2E86AB',
+                    fillOpacity: 0.9
+                }),
+                style: { color: '#2E86AB', weight: 2, fillOpacity: 0.1 },
+                onEachFeature: (feature, layer) => {
+                    const pname = getProp(feature, ['panchayat', 'PANCHAYAT', 'Panchayat', 'NAME', 'Name']) || 'Panchayat';
+                    const villageCount = feature.properties && feature.properties.village_count;
+
+                    layer.bindPopup(escapeHtml(pname) + (villageCount ? ` (${villageCount} villages)` : ''));
+                    layer.on('click', () => {
+                        if (layer.getBounds) {
+                            try {
+                                map.fitBounds(layer.getBounds(), { padding: [30, 30] });
+                            } catch (e) {
+                                // Point layers do not have polygon bounds.
+                            }
+                        }
+                        showPanchayat(pname);
+                    });
+                }
+            }).addTo(map);
+        }
+
+        fetch('data/panchayats.geojson')
+            .then(r => r.ok ? r.json() : Promise.reject('panchayats not found'))
+            .then(handlePanchayatFeatures)
+            .catch(() => {
+                fetch('data/panchayats_from_villages.geojson')
+                    .then(r => r.ok ? r.json() : Promise.reject('panchayats_from_villages not found'))
+                    .then(handlePanchayatFeatures)
+                    .catch(showPanchayatList);
             });
-        });
+    })
+    .catch(err => {
+        document.getElementById('list').innerHTML = `<strong>Error loading villages data:</strong> ${escapeHtml(err)}. Start a local server and check that data/villages.geojson exists.`;
     });
 
-}).catch(err => {
-    document.getElementById('list').innerHTML = `<strong>Error loading villages data:</strong> ${err}. See README for conversion steps.`;
-});
+function showPanchayatList() {
+    const el = document.getElementById('list');
+    const keys = Object.keys(villagesIndex).sort((a, b) => panchayatNames[a].localeCompare(panchayatNames[b]));
+
+    el.innerHTML = `<h3>Panchayats (${keys.length})</h3><div style="max-height:60vh;overflow:auto"><ul>` +
+        keys.map(k => `<li><a href="#" data-p="${escapeHtml(k)}">${escapeHtml(panchayatNames[k])}</a></li>`).join('') +
+        `</ul></div><p>Click a panchayat to zoom and list its villages.</p>`;
+
+    el.querySelectorAll('a[data-p]').forEach(a => {
+        a.addEventListener('click', e => {
+            e.preventDefault();
+            showPanchayat(a.dataset.p);
+        });
+    });
+}
 
 function showPanchayat(pname) {
-    const list = villagesIndex[pname] || [];
+    const key = normalizeKey(pname);
+    const list = villagesIndex[key] || [];
+    const displayName = panchayatNames[key] || pname || 'Panchayat';
     const el = document.getElementById('list');
+
     if (list.length) {
-        const names = list.map(v => getProp(v, ['Village_Na', 'Village', 'NAME', 'Village_Name']) || 'Village');
-        el.innerHTML = `<h3>${pname} — ${list.length} villages</h3><ul>` + names.map(n => `<li>${n}</li>`).join('') + `</ul>`;
-        // zoom to bounds of villages
+        const names = list.map(getVillageName).sort((a, b) => String(a).localeCompare(String(b)));
+
+        el.innerHTML = `<h3>${escapeHtml(displayName)} - ${list.length} villages</h3><ul>` +
+            names.map(n => `<li>${escapeHtml(n)}</li>`).join('') +
+            `</ul>`;
+
         const latlngs = [];
         list.forEach(f => {
             const g = f.geometry;
             if (g && (g.type === 'Point' || g.type === 'MultiPoint')) {
                 const c = g.coordinates;
-                if (Array.isArray(c[0])) { // multipoint
+                if (Array.isArray(c[0])) {
                     c.forEach(cc => latlngs.push([cc[1], cc[0]]));
                 } else {
                     latlngs.push([c[1], c[0]]);
                 }
             }
         });
+
         if (latlngs.length) {
-            map.fitBounds(latlngs);
+            map.fitBounds(latlngs, { padding: [30, 30], maxZoom: 13 });
         }
     } else {
-        el.innerHTML = `<h3>${pname}</h3><p>No villages found for this panchayat.</p>`;
+        el.innerHTML = `<h3>${escapeHtml(displayName)}</h3><p>No villages found for this panchayat.</p>`;
     }
 }

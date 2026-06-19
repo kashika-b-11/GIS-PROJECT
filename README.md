@@ -1,48 +1,40 @@
-# Panchayat → Villages Map (up to Module 3)
+# Panchayat to Villages Map
 
-This small project shows how to click a panchayat and list all villages under it using a Leaflet web map.
+This project shows Himachal Pradesh village locations on a Leaflet map. Click a panchayat marker to list the villages that belong to it.
 
-Files created:
-- `index.html` — web page with map and sidebar.
-- `js/app.js` — mapping logic and interaction.
-- `data/` — place your GeoJSON files here: `panchayats.geojson` and `villages.geojson`.
+## Run locally
 
-Quick steps to get running (Windows):
+Do not open `index.html` directly from File Explorer. Browser security rules can block the GeoJSON files when the page is opened as a local file.
 
-1. Convert your File Geodatabase (.gdb) to GeoJSON
-
-Install GDAL/ogr2ogr (use OSGeo4W, conda, or the standalone GDAL binaries). Then list layers:
+Start a local server from the project folder:
 
 ```powershell
-ogrinfo "C:\path\to\your\8_State_Vigilance_Bureau.gdb"
-```
-
-Find the layer names for panchayats and villages. Then export each layer to GeoJSON:
-
-```powershell
-ogr2ogr -f GeoJSON data/panchayats.geojson "C:\path\to\8_State_Vigilance_Bureau.gdb" "PanchayatLayerName"
-ogr2ogr -f GeoJSON data/villages.geojson "C:\path\to\8_State_Vigilance_Bureau.gdb" "VillageLayerName"
-```
-
-Replace the layer names with the ones shown by `ogrinfo`.
-
-2. Start a local web server (to avoid CORS/file issues)
-
-```powershell
-cd "C:\Users\HP\Desktop\GIS PROJECT"
 python -m http.server 8000
 ```
 
-Open http://localhost:8000 in your browser.
+Then open:
 
-3. Where to change things
+```text
+http://localhost:8000
+```
 
-- Data files: put your GeoJSON files at `data/panchayats.geojson` and `data/villages.geojson`.
-- Property names used for matching: edit `js/app.js`. The helper `getProp` tries common property names (e.g. `PANCHAYAT`, `NAME`). If your files use other property names, update the arrays passed to `getProp`.
-- Styles and behavior: change the `style` objects in `js/app.js` or adjust the popup/list HTML.
+## Important files
 
-4. Notes and debugging
+- `index.html` - web page with the map and sidebar.
+- `js/app.js` - Leaflet logic, panchayat matching, popups, and village list rendering.
+- `data/villages.geojson` - village point data.
+- `data/panchayats_from_villages.geojson` - generated panchayat marker data.
 
-- If the sidebar says data not found, check file names and that the server is serving the `data/` folder.
-- If panchayats show but villages don't list, open your `villages.geojson` in a text editor and inspect `properties` for the correct linking field (panchayat name or ID). Update `js/app.js` to use that property.
+## Data fields used
 
+The current village dataset uses:
+
+- Panchayat name: `Gram_Panch`
+- Village name: `Village_Ve`
+
+If you replace the GeoJSON with a different dataset, update `getPanchayatName()` and `getVillageName()` in `js/app.js`.
+
+## Notes
+
+- `data/panchayats.geojson` is optional. If it is not present, the app automatically uses `data/panchayats_from_villages.geojson`.
+- The map uses Leaflet from the public CDN, so the browser needs internet access unless you download Leaflet locally and update the links in `index.html`.
