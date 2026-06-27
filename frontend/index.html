@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Panchayat to Villages Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        html,
+        body,
+        #map {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        #sidebar {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 320px;
+            max-height: 80%;
+            overflow: auto;
+            background: rgba(255, 255, 255, 0.96);
+            padding: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            border-radius: 6px;
+        }
+
+        #sidebar h3 {
+            margin: 0 0 8px 0;
+        }
+
+        #sidebar ul {
+            margin: 8px 0 0 18px;
+            padding: 0;
+        }
+
+        #sidebar li {
+            margin: 4px 0;
+        }
+
+        #village-search {
+            display: flex;
+            gap: 6px;
+            margin: 10px 0;
+        }
+
+        #village-query {
+            flex: 1;
+            min-width: 0;
+            padding: 7px 8px;
+            border: 1px solid #bbb;
+            border-radius: 4px;
+        }
+
+        #village-search button {
+            padding: 7px 10px;
+            border: 1px solid #2E86AB;
+            border-radius: 4px;
+            background: #2E86AB;
+            color: white;
+            cursor: pointer;
+        }
+
+        .result-button,
+        .village-button {
+            border: 0;
+            background: transparent;
+            color: #0b5f82;
+            cursor: pointer;
+            padding: 0;
+            text-align: left;
+            font: inherit;
+        }
+
+        .muted {
+            color: #666;
+            font-size: 13px;
+        }
+
+        .village-label {
+            border: 1px solid #7b1fa2;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.96);
+            color: #4a1360;
+            font-weight: 700;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+            padding: 2px 5px;
+        }
+
+        #map-container {
+            position: relative;
+            height: 100vh;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="map-container">
+        <div id="map"></div>
+        <div id="sidebar">
+            <form id="village-search">
+                <input id="village-query" type="search" placeholder="Search village or panchayat" />
+                <button type="submit">Search</button>
+            </form>
+            <div id="list">
+                <strong>Loading panchayats...</strong>
+                <p>The map now loads village data only after you click a panchayat.</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="js/app.js"></script>
+</body>
+
+</html>

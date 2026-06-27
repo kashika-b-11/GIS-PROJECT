@@ -1,40 +1,83 @@
 # Panchayat to Villages Map
 
-This project shows Himachal Pradesh village locations on a Leaflet map. Click a panchayat marker to list the villages that belong to it.
+This project is now split into a frontend, backend, and database setup.
 
-## Run locally
+The performance fix is that the browser no longer loads all villages at startup. It loads panchayat markers first, then asks the backend for villages only when you click a panchayat.
 
-Do not open `index.html` directly from File Explorer. Browser security rules can block the GeoJSON files when the page is opened as a local file.
+The backend also keeps an in-memory index of the GeoJSON data in fallback mode, so repeated panchayat and village searches are much faster after the first load.
 
-Start a local server from the project folder:
-
-```powershell
-python -m http.server 8000
-```
-
-Then open:
+## Project Structure
 
 ```text
-http://localhost:8000
+GIS-PROJECT/
+  backend/
+    app.py
+    requirements.txt
+  database/
+    import_data.md
+    schema.sql
+  data/
+    villages.geojson
+    panchayats_from_villages.geojson
+  frontend/
+    index.html
+    js/app.js
 ```
 
-## Important files
+## Run Without Database First
 
-- `index.html` - web page with the map and sidebar.
-- `js/app.js` - Leaflet logic, panchayat matching, popups, and village list rendering.
-- `data/villages.geojson` - village point data.
-- `data/panchayats_from_villages.geojson` - generated panchayat marker data.
+This mode uses your existing GeoJSON files through the Flask backend. It is useful while you are setting up PostgreSQL/PostGIS.
 
-## Data fields used
+```powershell
+cd "C:\Users\HP\Desktop\GIS PROJECT"
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r backend\requirements.txt
+python backend\app.py
+```
+
+Open:
+
+```text
+http://127.0.0.1:5000
+```
+
+## Run With PostGIS
+
+Follow:
+
+```text
+database/import_data.md
+```
+
+After importing the data, set `DATABASE_URL` before starting Flask:
+
+```powershell
+$env:DATABASE_URL="postgresql://postgres:YOUR_PASSWORD@localhost:5432/gis_project"
+python backend\app.py
+```
+
+## API Routes
+
+```text
+GET /api/health
+GET /api/panchayats
+GET /api/villages?panchayat=Lanjhta
+GET /api/search-villages?q=Baraun
+```
+
+## Data Fields Used
 
 The current village dataset uses:
 
-- Panchayat name: `Gram_Panch`
-- Village name: `Village_Ve`
+```text
+Panchayat name: Gram_Panch
+Village name: Village_Ve
+```
 
-If you replace the GeoJSON with a different dataset, update `getPanchayatName()` and `getVillageName()` in `js/app.js`.
+If you replace the GeoJSON files with different fields, update the helper functions in:
 
-## Notes
-
-- `data/panchayats.geojson` is optional. If it is not present, the app automatically uses `data/panchayats_from_villages.geojson`.
-- The map uses Leaflet from the public CDN, so the browser needs internet access unless you download Leaflet locally and update the links in `index.html`.
+```text
+backend/app.py
+frontend/js/app.js
+```
